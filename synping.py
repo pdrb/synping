@@ -1,23 +1,68 @@
 #!/usr/bin/python
 
-# synping v0.1
+# synping 0.2
 # author: Pedro Buteri Gonring
 # email: pedro@bigode.net
-# date: 14/06/2014
+# date: 03/02/2017
 
 import socket
-import random
 import time
 import sys
-
-# Set the timeout for the socket
-timeout = 3
-# Store the packets latency
-times = []
+import argparse
 
 
-# Function to ping the server
-def ping(host, port):
+# Parse and validate arguments
+def get_parsed_args():
+    # Create the parser
+    parser = argparse.ArgumentParser(
+        description='ping hosts using tcp syn packets', version='0.2')
+    parser.add_argument('host', type=str, help='hostname or IP to ping')
+    parser.add_argument('-t', action='store_true', default=False,
+                        help="ping host until stopped with 'control-c'")
+    parser.add_argument('-n', dest='count', metavar='COUNT', default=4,
+                        type=int, help="number of requests to send")
+    parser.add_argument('-p', dest='port', default=80, type=int,
+                        help="port number to use (default: 80)")
+    parser.add_argument('-w', dest='timeout', default=3, type=int,
+                        help="timeout in seconds to wait for reply \
+                        (default: 3)")
+
+    # Print help if no argument is given
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(2)
+
+    # Parse the args
+    args = parser.parse_args()
+
+    # Some args validation
+    if args.port <= 0 or args.port > 65535:
+        print '\nerror: port must be a number between 1 and 65535'
+        sys.exit(2)
+    if args.timeout < 1:
+        print '\nerror: timeout must be a positive number'
+        sys.exit(2)
+    if args.count <= 0:
+        print '\nerror: count must be a positive number'
+        sys.exit(2)
+    return args
+
+
+# Get the host IP
+def get_ip(host):
+    try:
+        remote_ip = socket.gethostbyname(host)
+    except Exception as ex:
+        if 'not know' in str(ex):
+            print '\nerror: unknown host'
+        else:
+            print ex
+        sys.exit(1)
+    return remote_ip
+
+
+# Ping the host
+def ping(host, port, timeout):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(timeout)
     t0 = time.time()
@@ -25,124 +70,99 @@ def ping(host, port):
     s.shutdown(socket.SHUT_RDWR)
     s.close()
     t1 = time.time()
-    tt = float(t1 - t0)
-    times.append(tt)
-    print 'Reply from %s:%d time=%.2f ms' % (host, port, tt * 1000)
+    tt = t1 - t0
+    return tt
 
 
-# Main function
+# Main
 def main():
-    # Check the number of args, do the validation and processing needed
-    if len(sys.argv) == 1 or len(sys.argv) > 4:
-        print '\nUsage: synping.py <host> [port] [count]\n\nExamples:\n\n' \
-              './synping localhost -> Ping localhost indefinitely on a random port\n' \
-              './synping localhost 80 -> Ping localhost indefinitely on port 80\n' \
-              './synping localhost 80 10 -> Ping localhost 10 times on port 80\n'
-        sys.exit(0)
-    if len(sys.argv) == 2:
-        port = random.randint(1, 65535)
-        count = 0
-    if len(sys.argv) == 3:
-        count = 0
-        try:
-            port = int(sys.argv[2])
-        except:
-            print '\nError: Port be an integer.\n'
-            sys.exit(0)
-    if len(sys.argv) == 4:
-        try:
-            port = int(sys.argv[2])
-            count = int(sys.argv[3])
-        except:
-            print '\nError: Port and count must be an integer.\n'
-            sys.exit(0)
-        if count <= 0:
-            print '\nError: Count must be a positive number.\n'
-            sys.exit(0)
-    if port <= 0 or port > 65535:
-        print '\nError: Port must be a number between 1 and 65535.\n'
-        sys.exit(0)
-    host = sys.argv[1]
+    args = get_parsed_args()
 
-    # Get the Host IP
-    try:
-        remote_ip = socket.gethostbyname(host)
-    except Exception as ex:
-        if 'not know' in str(ex):
-            print '\nUNKNOWN host.\n'
-        else:
-            print ex
-        sys.exit(0)
-
-    # Initiate the variables needed for the summary
+    # Needed variables
+    times = []
     rcvd = 0
     sent = 0
     total = 0
 
+    # Get the host IP
+    remote_ip = get_ip(args.host)
+
     # Print the appropriate beginning message
-    if len(sys.argv) == 2:
-        print '\nPinging %s indefinitely on a random port:\n' % host
-    if len(sys.argv) == 3:
-        print '\nPinging %s indefinitely on port %d:\n' % (host, port)
-    if len(sys.argv) == 4:
-        print '\nPinging %s %d times on port %d:\n' % (host, count, port)
+    if not args.t:
+        print '\nPinging %s %d times on port %d:\n'\
+            % (args.host, args.count, args.port)
+    else:
+        print '\nPinging %s on port %d:\n' % (args.host, args.port)
 
     # Begin the pinging
     try:
         while True:
-            # Sleep between the requests
-            time.sleep(1)
-            # Check the count variable to determine the loop ending
-            if count != 0:
-                if sent == count:
-                    break
+            # Timer needed for refused connections
             tr0 = time.time()
             try:
-                ping(remote_ip, port)
+                tt = ping(remote_ip, args.port, args.timeout)
+                times.append(tt)
                 sent += 1
                 rcvd += 1
+                print 'Reply from %s:%d time=%.2f ms'\
+                    % (remote_ip, args.port, tt * 1000)
             except Exception as ex:
                 tr1 = time.time()
-                # If the host respond with a refused message it means it is alive
+                # If the host respond with a refused message it means it is
+                # alive
                 if 'refused' in str(ex):
+                    ttr = tr1 - tr0
+                    times.append(ttr)
                     sent += 1
                     rcvd += 1
-                    ttr = float(tr1 - tr0)
-                    times.append(ttr)
-                    print 'Reply from %s:%d time=%.2f ms' % (remote_ip, port, ttr * 1000)
+                    print 'Reply from %s:%d time=%.2f ms'\
+                        % (remote_ip, args.port, ttr * 1000)
                 elif 'timed out' in str(ex):
                     sent += 1
-                    print 'Timed out after ' + str(timeout) + ' seconds'
+                    print 'Timed out after ' + str(args.timeout) + ' seconds'
                 elif 'argument' in str(ex):
-                    print 'INVALID host.\n'
-                    sys.exit(0)
+                    print 'error: invalid host\n'
+                    sys.exit(1)
                 else:
                     sent += 1
                     print ex
+            # End the loop if needed
+            if not args.t:
+                if sent == args.count:
+                    break
+            # Sleep between the requests
+            time.sleep(1)
     # Catch the keyboard interrupt to end the loop
     except KeyboardInterrupt:
         print '\nAborted.'
 
-    # If no packets received or sent end the program
-    if rcvd == 0 or sent == 0:
+    # Early exit without sending packets
+    if sent == 0:
+        sys.exit(1)
+
+    # If no packets received print appropriate message and end the program
+    if rcvd == 0:
         print "\nDidn't receive any packets..."
-        print "\nHost is probably DOWN or firewalled. Sorry :'(\n"
-        sys.exit(0)
+        print "Host is probably DOWN or firewalled. Sorry :'("
+        sys.exit(1)
 
     # Calculate the average time
-    for i in range(len(times)):
-        total += times[i]
+    for t in times:
+        total += t
     average = total / rcvd
 
     # Print the summary
-    print '\nSummary:'
+    print '\nStatistics:'
     print '-' * 26
-    print '\nHost: %s\n' % host
-    print 'Sent: %d packets\nReceived: %d packets\nLost: %d packets (%.2f%%)\n' \
-          % (sent, rcvd, sent - rcvd, float(sent - rcvd) / sent * 100)
-    print 'Min time: %.2f ms\nMax time: %.2f ms\nAverage time: %.2f ms\n' \
-          % (min(times) * 1000, max(times) * 1000, average * 1000)
+    print '\nHost: %s\n' % args.host
+    print (
+        "Sent: %d packets\nReceived: %d packets\n"
+        "Lost: %d packets (%.2f%%)\n"
+    ) % (sent, rcvd, sent - rcvd, float(sent - rcvd) / sent * 100)
+    print 'Min time: %.2f ms\nMax time: %.2f ms\nAverage time: %.2f ms'\
+        % (min(times) * 1000, max(times) * 1000, average * 1000)
 
-# Program begins here
+
+# Run main function if invoked from shell
 if __name__ == '__main__':
     main()
