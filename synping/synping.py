@@ -74,8 +74,8 @@ def ping(host, port, timeout):
     return tt
 
 
-# Main
-def main():
+# Main CLI
+def cli():
     args = get_parsed_args()
 
     # Needed variables
@@ -165,4 +165,4 @@ def main():
 
 # Run main function if invoked from shell
 if __name__ == '__main__':
-    main()
+    cli()

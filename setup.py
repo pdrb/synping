@@ -17,10 +17,10 @@ setup(
     url='https://github.com/pdrb/synping',
     license='MIT',
     classifiers = [],
-    keywords = 'ping syn tcp packets',    
+    keywords = 'ping syn tcp packets synping',    
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
     install_requires=['argparse'],
     entry_points={
-        'console_scripts': ['synping=synping:main'],
+        'console_scripts': ['synping=synping.synping:cli'],
     },
 )
