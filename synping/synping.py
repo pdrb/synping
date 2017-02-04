@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# synping 0.2
+# synping 0.3
 # author: Pedro Buteri Gonring
 # email: pedro@bigode.net
 # date: 03/02/2017
@@ -15,7 +15,7 @@ import argparse
 def get_parsed_args():
     # Create the parser
     parser = argparse.ArgumentParser(
-        description='ping hosts using tcp syn packets', version='0.2')
+        description='ping hosts using tcp syn packets', version='0.3')
     parser.add_argument('host', type=str, help='hostname or IP to ping')
     parser.add_argument('-t', action='store_true', default=False,
                         help="ping host until stopped with 'control-c'")

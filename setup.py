@@ -9,7 +9,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='synping',
-    version='0.2',
+    version='0.3',
     description='Ping hosts using tcp syn packets',
     long_description=long_description,
     author='Pedro Buteri Gonring',
