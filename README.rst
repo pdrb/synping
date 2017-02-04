@@ -35,20 +35,18 @@ Similar to "ping" utility:
 
 ::
 
-    usage: synping.py [-h] [-v] [-t] [-n COUNT] [-p PORT] [-w TIMEOUT] host
+    Usage: synping.py host [options]
 
     ping hosts using tcp syn packets
 
-    positional arguments:
-      host           hostname or IP to ping
-
-    optional arguments:
-      -h, --help     show this help message and exit
-      -v, --version  show program's version number and exit
-      -t             ping host until stopped with 'control-c'
-      -n COUNT       number of requests to send
-      -p PORT        port number to use (default: 80)
-      -w TIMEOUT     timeout in seconds to wait for reply (default: 3)
+    Options:
+      --version   show program's version number and exit
+      -h, --help  show this help message and exit
+      -t          ping host until stopped with 'control-c'
+      -n COUNT    number of requests to send (default: 4)
+      -p PORT     port number to use (default: 80)
+      -w TIMEOUT  timeout in seconds to wait for reply
+                  (default: 3)
 
 Examples
 --------
@@ -74,6 +72,6 @@ Ping host 10 times with 1 second timeout:
 Notes
 -----
 
-- Works on Python2 (not tested on Python3)
+- Works on Python 2
 - Works fine on Linux and should work on all platforms
 - Briefly tested on Windows, Cygwin and OSX

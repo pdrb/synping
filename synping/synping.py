@@ -1,31 +1,36 @@
 #!/usr/bin/python
 
-# synping 0.3
+# synping 0.4
 # author: Pedro Buteri Gonring
 # email: pedro@bigode.net
-# date: 03/02/2017
+# date: 04/02/2017
 
 import socket
 import time
 import sys
-import argparse
+import optparse
+
+
+version = '0.4'
 
 
 # Parse and validate arguments
 def get_parsed_args():
+    usage = 'usage: %prog host [options]'
     # Create the parser
-    parser = argparse.ArgumentParser(
-        description='ping hosts using tcp syn packets', version='0.3')
-    parser.add_argument('host', type=str, help='hostname or IP to ping')
-    parser.add_argument('-t', action='store_true', default=False,
-                        help="ping host until stopped with 'control-c'")
-    parser.add_argument('-n', dest='count', metavar='COUNT', default=4,
-                        type=int, help="number of requests to send")
-    parser.add_argument('-p', dest='port', default=80, type=int,
-                        help="port number to use (default: 80)")
-    parser.add_argument('-w', dest='timeout', default=3, type=int,
-                        help="timeout in seconds to wait for reply \
-                        (default: 3)")
+    parser = optparse.OptionParser(
+        description='ping hosts using tcp syn packets',
+        usage=usage, version=version
+    )
+    parser.add_option('-t', action='store_true', default=False,
+                      help="ping host until stopped with 'control-c'")
+    parser.add_option('-n', dest='count', default=4, type=int,
+                      help="number of requests to send (default: %default)")
+    parser.add_option('-p', dest='port', default=80, type=int,
+                      help="port number to use (default: %default)")
+    parser.add_option('-w', dest='timeout', default=3, type=int,
+                      help="timeout in seconds to wait for reply \
+                        (default: %default)")
 
     # Print help if no argument is given
     if len(sys.argv) == 1:
@@ -33,19 +38,20 @@ def get_parsed_args():
         sys.exit(2)
 
     # Parse the args
-    args = parser.parse_args()
+    (options, args) = parser.parse_args()
 
     # Some args validation
-    if args.port <= 0 or args.port > 65535:
-        print '\nerror: port must be a number between 1 and 65535'
-        sys.exit(2)
-    if args.timeout < 1:
-        print '\nerror: timeout must be a positive number'
-        sys.exit(2)
-    if args.count <= 0:
-        print '\nerror: count must be a positive number'
-        sys.exit(2)
-    return args
+    if len(args) == 0:
+        parser.error('host not informed')
+    if len(args) > 1:
+        parser.error('incorrect number of arguments')
+    if options.port <= 0 or options.port > 65535:
+        parser.error('port must be a number between 1 and 65535')
+    if options.timeout < 1:
+        parser.error('timeout must be a positive number')
+    if options.count <= 0:
+        parser.error('count must be a positive number')
+    return (options, args)
 
 
 # Get the host IP
@@ -76,7 +82,8 @@ def ping(host, port, timeout):
 
 # Main CLI
 def cli():
-    args = get_parsed_args()
+    (options, args) = get_parsed_args()
+    host = args[0]
 
     # Needed variables
     times = []
@@ -85,14 +92,14 @@ def cli():
     total = 0
 
     # Get the host IP
-    remote_ip = get_ip(args.host)
+    remote_ip = get_ip(host)
 
     # Print the appropriate beginning message
-    if not args.t:
+    if not options.t:
         print '\nPinging %s %d times on port %d:\n'\
-            % (args.host, args.count, args.port)
+            % (host, options.count, options.port)
     else:
-        print '\nPinging %s on port %d:\n' % (args.host, args.port)
+        print '\nPinging %s on port %d:\n' % (host, options.port)
 
     # Begin the pinging
     try:
@@ -100,12 +107,12 @@ def cli():
             # Timer needed for refused connections
             tr0 = time.time()
             try:
-                tt = ping(remote_ip, args.port, args.timeout)
+                tt = ping(remote_ip, options.port, options.timeout)
                 times.append(tt)
                 sent += 1
                 rcvd += 1
                 print 'Reply from %s:%d time=%.2f ms'\
-                    % (remote_ip, args.port, tt * 1000)
+                    % (remote_ip, options.port, tt * 1000)
             except Exception as ex:
                 tr1 = time.time()
                 # If the host respond with a refused message it means it is
@@ -116,10 +123,13 @@ def cli():
                     sent += 1
                     rcvd += 1
                     print 'Reply from %s:%d time=%.2f ms'\
-                        % (remote_ip, args.port, ttr * 1000)
+                        % (remote_ip, options.port, ttr * 1000)
                 elif 'timed out' in str(ex):
                     sent += 1
-                    print 'Timed out after ' + str(args.timeout) + ' seconds'
+                    print (
+                        'Timed out after ' + str(options.timeout) +
+                        ' seconds'
+                    )
                 elif 'argument' in str(ex):
                     print 'error: invalid host\n'
                     sys.exit(1)
@@ -127,8 +137,8 @@ def cli():
                     sent += 1
                     print ex
             # End the loop if needed
-            if not args.t:
-                if sent == args.count:
+            if not options.t:
+                if sent == options.count:
                     break
             # Sleep between the requests
             time.sleep(1)
@@ -154,7 +164,7 @@ def cli():
     # Print the summary
     print '\nStatistics:'
     print '-' * 26
-    print '\nHost: %s\n' % args.host
+    print '\nHost: %s\n' % host
     print (
         "Sent: %d packets\nReceived: %d packets\n"
         "Lost: %d packets (%.2f%%)\n"
