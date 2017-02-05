@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# synping 0.6
+# synping 0.7
 # author: Pedro Buteri Gonring
 # email: pedro@bigode.net
 # date: 05/02/2017
@@ -11,7 +11,7 @@ import sys
 import optparse
 
 
-version = '0.6'
+version = '0.7'
 
 
 # Parse and validate arguments
@@ -58,8 +58,8 @@ def get_parsed_args():
 def get_ip(host):
     try:
         remote_ip = socket.gethostbyname(host)
-    except Exception as ex:
-        if 'Errno' in str(ex):
+    except Exception, ex:
+        if 'Errno' in str(ex) or '-2' in str(ex) or 'not know' in str(ex):
             print '\nerror: unknown host'
         else:
             print ex
@@ -113,12 +113,12 @@ def cli():
                 rcvd += 1
                 print 'Reply from %s:%d time=%.2f ms'\
                     % (remote_ip, options.port, tt * 1000)
-            except Exception as ex:
+            except Exception, ex:
                 tr1 = time.time()
                 # If the host respond with a refused message it means it is
-                # alive
-                if any(m in str(ex) for m in ('Errno 111',
-                                              'Errno 10061', 'refused')):
+                # alive, 111 and 10061 are Errno codes for linux and windows
+                if '111' in str(ex) or '10061' in str(ex)\
+                        or 'refused' in str(ex):
                     ttr = tr1 - tr0
                     times.append(ttr)
                     sent += 1
@@ -131,7 +131,7 @@ def cli():
                         'Timed out after ' + str(options.timeout) +
                         ' seconds'
                     )
-                elif 'Errno 22' in str(ex) or 'argument' in str(ex):
+                elif '22' in str(ex) or 'argument' in str(ex):
                     print 'error: invalid host'
                     sys.exit(1)
                 else:
