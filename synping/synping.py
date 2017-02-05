@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# synping 0.5
+# synping 0.6
 # author: Pedro Buteri Gonring
 # email: pedro@bigode.net
 # date: 05/02/2017
@@ -11,7 +11,7 @@ import sys
 import optparse
 
 
-version = '0.5'
+version = '0.6'
 
 
 # Parse and validate arguments
@@ -117,7 +117,8 @@ def cli():
                 tr1 = time.time()
                 # If the host respond with a refused message it means it is
                 # alive
-                if 'Errno 111' or 'Errno 10061' or 'refused' in str(ex):
+                if any(m in str(ex) for m in ('Errno 111',
+                                              'Errno 10061', 'refused')):
                     ttr = tr1 - tr0
                     times.append(ttr)
                     sent += 1
@@ -130,7 +131,7 @@ def cli():
                         'Timed out after ' + str(options.timeout) +
                         ' seconds'
                     )
-                elif 'Errno 22' or 'argument' in str(ex):
+                elif 'Errno 22' in str(ex) or 'argument' in str(ex):
                     print 'error: invalid host'
                     sys.exit(1)
                 else:
