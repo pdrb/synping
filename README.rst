@@ -1,7 +1,7 @@
 synping
 =======
 
-Python script to "ping" hosts using tcp syn packets.
+Ping hosts using tcp syn packets.
 
 Install
 -------
@@ -31,11 +31,9 @@ Download and run using the python interpreter:
 Usage
 -----
 
-Similar to "ping" utility:
-
 ::
 
-    Usage: synping.py host [options]
+    Usage: synping host [options]
 
     ping hosts using tcp syn packets
 
