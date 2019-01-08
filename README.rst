@@ -31,7 +31,7 @@ Simple example::
 
 
 Install
--------
+=======
 
 Install using pip::
 
@@ -51,7 +51,7 @@ Download and run using the python interpreter::
 
 
 Usage
------
+=====
 
 ::
 
@@ -70,7 +70,7 @@ Usage
 
 
 Examples
---------
+========
 
 Ping host on port 80 (default)::
 
@@ -86,7 +86,7 @@ Ping host 10 times with 1 second timeout::
 
 
 Notes
------
+=====
 
 - Works on Python 2 and Python 3
 - Works fine on Linux and should work on all platforms
