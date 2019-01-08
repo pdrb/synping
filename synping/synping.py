@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
-# synping 0.7
+# synping 0.8
 # author: Pedro Buteri Gonring
 # email: pedro@bigode.net
-# date: 05/02/2017
+# date: 20190108
 
 import socket
 import time
@@ -11,7 +11,7 @@ import sys
 import optparse
 
 
-version = '0.7'
+version = '0.8'
 
 
 # Parse and validate arguments
@@ -58,11 +58,11 @@ def get_parsed_args():
 def get_ip(host):
     try:
         remote_ip = socket.gethostbyname(host)
-    except Exception, ex:
+    except Exception as ex:
         if 'Errno' in str(ex) or '-2' in str(ex) or 'not know' in str(ex):
-            print '\nerror: unknown host'
+            print('\nerror: unknown host')
         else:
-            print ex
+            print(ex)
         sys.exit(1)
     return remote_ip
 
@@ -96,10 +96,10 @@ def cli():
 
     # Print the appropriate beginning message
     if not options.t:
-        print '\nPinging %s %d times on port %d:\n'\
-            % (host, options.count, options.port)
+        print('\nPinging %s %d times on port %d:\n'
+              % (host, options.count, options.port))
     else:
-        print '\nPinging %s on port %d:\n' % (host, options.port)
+        print('\nPinging %s on port %d:\n' % (host, options.port))
 
     # Begin the pinging
     try:
@@ -111,9 +111,9 @@ def cli():
                 times.append(tt)
                 sent += 1
                 rcvd += 1
-                print 'Reply from %s:%d time=%.2f ms'\
-                    % (remote_ip, options.port, tt * 1000)
-            except Exception, ex:
+                print('Reply from %s:%d time=%.2f ms'
+                      % (remote_ip, options.port, tt * 1000))
+            except Exception as ex:
                 tr1 = time.time()
                 # If the host respond with a refused message it means it is
                 # alive, 111 and 10061 are Errno codes for linux and windows
@@ -123,20 +123,19 @@ def cli():
                     times.append(ttr)
                     sent += 1
                     rcvd += 1
-                    print 'Reply from %s:%d time=%.2f ms'\
-                        % (remote_ip, options.port, ttr * 1000)
+                    print('Reply from %s:%d time=%.2f ms'
+                          % (remote_ip, options.port, ttr * 1000))
                 elif 'timed out' in str(ex):
                     sent += 1
-                    print (
-                        'Timed out after ' + str(options.timeout) +
-                        ' seconds'
+                    print(
+                        'Timed out after ' + str(options.timeout) + ' seconds'
                     )
                 elif '22' in str(ex) or 'argument' in str(ex):
-                    print 'error: invalid host'
+                    print('error: invalid host')
                     sys.exit(1)
                 else:
                     sent += 1
-                    print ex
+                    print(ex)
             # End the loop if needed
             if not options.t:
                 if sent == options.count:
@@ -145,7 +144,7 @@ def cli():
             time.sleep(1)
     # Catch the keyboard interrupt to end the loop
     except KeyboardInterrupt:
-        print '\nAborted.'
+        print('\nAborted.')
 
     # Early exit without sending packets
     if sent == 0:
@@ -153,8 +152,8 @@ def cli():
 
     # If no packets received print appropriate message and end the program
     if rcvd == 0:
-        print "\nDidn't receive any packets..."
-        print "Host is probably DOWN or firewalled. Sorry :'("
+        print("\nDidn't receive any packets...")
+        print("Host is probably DOWN or firewalled. Sorry :'(")
         sys.exit(1)
 
     # Calculate the average time
@@ -163,15 +162,16 @@ def cli():
     average = total / rcvd
 
     # Print the summary
-    print '\nStatistics:'
-    print '-' * 26
-    print '\nHost: %s\n' % host
-    print (
+    print('\nStatistics:')
+    print('-' * 26)
+    print('\nHost: %s\n' % host)
+    print(
         "Sent: %d packets\nReceived: %d packets\n"
         "Lost: %d packets (%.2f%%)\n"
-    ) % (sent, rcvd, sent - rcvd, float(sent - rcvd) / sent * 100)
-    print 'Min time: %.2f ms\nMax time: %.2f ms\nAverage time: %.2f ms'\
-        % (min(times) * 1000, max(times) * 1000, average * 1000)
+        % (sent, rcvd, sent - rcvd, float(sent - rcvd) / sent * 100)
+    )
+    print('Min time: %.2f ms\nMax time: %.2f ms\nAverage time: %.2f ms'
+          % (min(times) * 1000, max(times) * 1000, average * 1000))
 
 
 # Run main function if invoked from shell
