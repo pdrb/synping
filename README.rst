@@ -30,6 +30,13 @@ Simple example::
     Average time: 7.95 ms
 
 
+Notes
+=====
+
+- Works on Python 2 and Python 3
+- Uses only Python standard library for maximum compatibility
+
+
 Install
 =======
 
@@ -83,14 +90,6 @@ Ping host on port 22::
 Ping host 10 times with 1 second timeout::
 
     $ synping host -n 10 -w 1
-
-
-Notes
-=====
-
-- Works on Python 2 and Python 3
-- Works fine on Linux and should work on all platforms
-- Briefly tested on Windows, Cygwin and OSX
 
 
 .. |Downloads| image:: https://pepy.tech/badge/synping
