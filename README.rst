@@ -3,9 +3,10 @@
 synping
 =======
 
-Ping hosts using tcp syn packets. Please note that full tcp handshake is used,
-we want the program to behave nicely and to explicit close the connection after each
-"ping".
+Ping hosts using tcp syn packets.
+
+Please note that full tcp handshake is used, we want the program to behave nicely
+and to explicit close the connection after each "ping".
 
 Simple example::
 
