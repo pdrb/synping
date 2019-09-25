@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
-# synping 0.8
+# synping 0.9
 # author: Pedro Buteri Gonring
 # email: pedro@bigode.net
-# date: 20190108
+# date: 20190925
 
 import socket
 import time
@@ -11,7 +11,7 @@ import sys
 import optparse
 
 
-version = '0.8'
+version = '0.9'
 
 
 # Parse and validate arguments
@@ -28,7 +28,7 @@ def get_parsed_args():
                       help="number of requests to send (default: %default)")
     parser.add_option('-p', dest='port', default=80, type=int,
                       help="port number to use (default: %default)")
-    parser.add_option('-w', dest='timeout', default=3, type=int,
+    parser.add_option('-w', dest='timeout', default=3, type=float,
                       help="timeout in seconds to wait for reply \
                         (default: %default)")
 
@@ -47,8 +47,8 @@ def get_parsed_args():
         parser.error('incorrect number of arguments')
     if options.port <= 0 or options.port > 65535:
         parser.error('port must be a number between 1 and 65535')
-    if options.timeout < 1:
-        parser.error('timeout must be a positive number')
+    if options.timeout <= 0:
+        parser.error('timeout must be greater than 0')
     if options.count <= 0:
         parser.error('count must be a positive number')
     return (options, args)
@@ -58,11 +58,8 @@ def get_parsed_args():
 def get_ip(host):
     try:
         remote_ip = socket.gethostbyname(host)
-    except Exception as ex:
-        if 'Errno' in str(ex) or '-2' in str(ex) or 'not know' in str(ex):
-            print('\nerror: unknown host')
-        else:
-            print(ex)
+    except:
+        print('error: unknown host %s' % host)
         sys.exit(1)
     return remote_ip
 
@@ -71,13 +68,21 @@ def get_ip(host):
 def ping(host, port, timeout):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(timeout)
-    t0 = time.time()
-    s.connect((host, port))
-    s.shutdown(socket.SHUT_RDWR)
+    init_time = time.time()
+    try:
+        s.connect((host, port))
+    except Exception as ex:
+        # Catches "[Errno 22] Invalid argument" on Linux, e.g., synping 1
+        if '22' in str(ex) or 'argument' in str(ex):
+            print('error: invalid host %s' % host)
+            sys.exit(1)
+        # Refused in error means host is alive, otherwise raise the exception
+        # like "timed out" so we can catch it on the main loop
+        if 'refused' not in str(ex):
+            raise(ex)
+    end_time = time.time()
     s.close()
-    t1 = time.time()
-    tt = t1 - t0
-    return tt
+    return (end_time - init_time) * 1000
 
 
 # Main CLI
@@ -86,10 +91,9 @@ def cli():
     host = args[0]
 
     # Needed variables
-    times = []
     rcvd = 0
     sent = 0
-    total = 0
+    total_time = 0
 
     # Get the host IP
     remote_ip = get_ip(host)
@@ -104,35 +108,29 @@ def cli():
     # Begin the pinging
     try:
         while True:
-            # Timer needed for refused connections
-            tr0 = time.time()
             try:
-                tt = ping(remote_ip, options.port, options.timeout)
-                times.append(tt)
+                ping_time = ping(remote_ip, options.port, options.timeout)
                 sent += 1
                 rcvd += 1
+                # Initialize min and max time
+                if rcvd == 1:
+                    min_time = ping_time
+                    max_time = ping_time
+                # Update min and max if needed
+                if ping_time < min_time:
+                    min_time = ping_time
+                if ping_time > max_time:
+                    max_time = ping_time
+                # Update the total time for calculating avg later
+                total_time += ping_time
                 print('Reply from %s:%d time=%.2f ms'
-                      % (remote_ip, options.port, tt * 1000))
+                      % (remote_ip, options.port, ping_time))
             except Exception as ex:
-                tr1 = time.time()
-                # If the host respond with a refused message it means it is
-                # alive, 111 and 10061 are Errno codes for linux and windows
-                if '111' in str(ex) or '10061' in str(ex)\
-                        or 'refused' in str(ex):
-                    ttr = tr1 - tr0
-                    times.append(ttr)
-                    sent += 1
-                    rcvd += 1
-                    print('Reply from %s:%d time=%.2f ms'
-                          % (remote_ip, options.port, ttr * 1000))
-                elif 'timed out' in str(ex):
+                if 'timed out' in str(ex):
                     sent += 1
                     print(
                         'Timed out after ' + str(options.timeout) + ' seconds'
                     )
-                elif '22' in str(ex) or 'argument' in str(ex):
-                    print('error: invalid host')
-                    sys.exit(1)
                 else:
                     sent += 1
                     print(ex)
@@ -153,13 +151,8 @@ def cli():
     # If no packets received print appropriate message and end the program
     if rcvd == 0:
         print("\nDidn't receive any packets...")
-        print("Host is probably DOWN or firewalled. Sorry :'(")
+        print("Host is probably DOWN or firewalled. Sorry :'(\n")
         sys.exit(1)
-
-    # Calculate the average time
-    for t in times:
-        total += t
-    average = total / rcvd
 
     # Print the summary
     print('\nStatistics:')
@@ -170,8 +163,8 @@ def cli():
         "Lost: %d packets (%.2f%%)\n"
         % (sent, rcvd, sent - rcvd, float(sent - rcvd) / sent * 100)
     )
-    print('Min time: %.2f ms\nMax time: %.2f ms\nAverage time: %.2f ms'
-          % (min(times) * 1000, max(times) * 1000, average * 1000))
+    print('Min time: %.2f ms\nMax time: %.2f ms\nAverage time: %.2f ms\n'
+          % (min_time, max_time, total_time / rcvd))
 
 
 # Run main function if invoked from shell
