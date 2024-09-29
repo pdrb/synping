@@ -5,7 +5,7 @@
 [![Version](https://img.shields.io/pypi/v/synping.svg)](https://pypi.python.org/pypi/synping)
 [![Downloads](https://static.pepy.tech/badge/synping)](https://pepy.tech/project/synping)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![LICENSE](https://img.shields.io/github/license/pdrb/synping)](https://github.com/pdrb/synping/blob/main/LICENSE)
+[![LICENSE](https://img.shields.io/github/license/pdrb/synping)](https://github.com/pdrb/synping/blob/master/LICENSE)
 
 Ping hosts using tcp syn packets.
 
