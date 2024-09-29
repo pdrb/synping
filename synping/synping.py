@@ -1,71 +1,98 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
-# synping 0.9
+# synping 1.0
 # author: Pedro Buteri Gonring
 # email: pedro@bigode.net
-# date: 20190925
+# date: 20240929
 
+import argparse
 import socket
-import time
 import sys
-import optparse
+import time
+
+_version = "1.0"
 
 
-version = '0.9'
-
-
-# Parse and validate arguments
-def get_parsed_args():
-    usage = 'usage: %prog host [options]'
-    # Create the parser
-    parser = optparse.OptionParser(
-        description='ping hosts using tcp syn packets',
-        usage=usage, version=version
+def parse_args() -> argparse.Namespace:
+    """Parse and validate arguments."""
+    # Create parser
+    parser = argparse.ArgumentParser(
+        prog="synping",
+        usage="%(prog)s host [options]",
+        description="ping hosts using tcp syn packets",
+        epilog="e.g.: %(prog)s example.org",
     )
-    parser.add_option('-t', action='store_true', default=False,
-                      help="ping host until stopped with 'control-c'")
-    parser.add_option('-n', dest='count', default=4, type=int,
-                      help="number of requests to send (default: %default)")
-    parser.add_option('-p', dest='port', default=80, type=int,
-                      help="port number to use (default: %default)")
-    parser.add_option('-w', dest='timeout', default=3, type=float,
-                      help="timeout in seconds to wait for reply \
-                        (default: %default)")
+
+    # Arguments
+    parser.add_argument(
+        "host",
+        help="host to ping",
+    )
+    parser.add_argument(
+        "-t",
+        action="store_true",
+        default=False,
+        help="ping host until stopped with 'control-c'",
+    )
+    parser.add_argument(
+        "-n",
+        dest="count",
+        default=4,
+        type=int,
+        help="number of requests to send (default: %(default)s)",
+    )
+    parser.add_argument(
+        "-p",
+        dest="port",
+        default=80,
+        type=int,
+        help="port to ping (default: %(default)s)",
+    )
+    parser.add_argument(
+        "-w",
+        dest="timeout",
+        default=3,
+        type=float,
+        help="timeout in seconds to wait for reply (default: %(default)s)",
+    )
+    parser.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        version=_version,
+    )
 
     # Print help if no argument is given
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(2)
 
-    # Parse the args
-    (options, args) = parser.parse_args()
+    # Parse arguments
+    args = parser.parse_args()
 
-    # Some args validation
-    if len(args) == 0:
-        parser.error('host not informed')
-    if len(args) > 1:
-        parser.error('incorrect number of arguments')
-    if options.port <= 0 or options.port > 65535:
-        parser.error('port must be a number between 1 and 65535')
-    if options.timeout <= 0:
-        parser.error('timeout must be greater than 0')
-    if options.count <= 0:
-        parser.error('count must be a positive number')
-    return (options, args)
+    # Validate arguments
+    if args.port <= 0 or args.port > 65535:
+        parser.error("port must be a number between 1 and 65535")
+    if args.timeout <= 0:
+        parser.error("timeout must be greater than 0")
+    if args.count <= 0:
+        parser.error("count must be a positive number")
+
+    return args
 
 
-# Get the host IP
-def get_ip(host):
+def get_ip(host: str) -> str:
+    """Get the host IP."""
     try:
         remote_ip = socket.gethostbyname(host)
-    except:
-        print('error: unknown host %s' % host)
+    except Exception as ex:
+        print(f"Error: {repr(ex)}")
         sys.exit(1)
     return remote_ip
 
 
-# Ping the host
-def ping(host, port, timeout):
+def ping(host: str, port: int, timeout: float) -> float:
+    """Ping host."""
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(timeout)
     init_time = time.time()
@@ -73,43 +100,40 @@ def ping(host, port, timeout):
         s.connect((host, port))
     except Exception as ex:
         # Catches "[Errno 22] Invalid argument" on Linux, e.g., synping 1
-        if '22' in str(ex) or 'argument' in str(ex):
-            print('error: invalid host %s' % host)
+        if "22" in str(ex) or "argument" in str(ex):
+            print(f"error: invalid host: {host}")
             sys.exit(1)
-        # Refused in error means host is alive, otherwise raise the exception
-        # like "timed out" so we can catch it on the main loop
-        if 'refused' not in str(ex):
-            raise(ex)
+        # Refused in error means host is alive
+        if "refused" not in str(ex):
+            raise ex
     end_time = time.time()
     s.close()
     return (end_time - init_time) * 1000
 
 
-# Main CLI
 def cli():
-    (options, args) = get_parsed_args()
-    host = args[0]
+    """Main CLI."""
+    args = parse_args()
 
-    # Needed variables
+    # Variables
     rcvd = 0
     sent = 0
     total_time = 0
 
     # Get the host IP
-    remote_ip = get_ip(host)
+    remote_ip = get_ip(args.host)
 
-    # Print the appropriate beginning message
-    if not options.t:
-        print('\nPinging %s %d times on port %d:\n'
-              % (host, options.count, options.port))
+    # Print appropriate beginning message
+    if not args.t:
+        print(f"\nPinging {args.host} {args.count} times on port {args.port}:\n")
     else:
-        print('\nPinging %s on port %d:\n' % (host, options.port))
+        print(f"\nPinging {args.host} on port {args.port}:\n")
 
     # Begin the pinging
     try:
         while True:
             try:
-                ping_time = ping(remote_ip, options.port, options.timeout)
+                ping_time = ping(remote_ip, args.port, args.timeout)
                 sent += 1
                 rcvd += 1
                 # Initialize min and max time
@@ -123,26 +147,23 @@ def cli():
                     max_time = ping_time
                 # Update the total time for calculating avg later
                 total_time += ping_time
-                print('Reply from %s:%d time=%.2f ms'
-                      % (remote_ip, options.port, ping_time))
+                print(f"Reply from {remote_ip}:{args.port} time={ping_time:.2f} ms")
             except Exception as ex:
-                if 'timed out' in str(ex):
+                if "timed out" in str(ex):
                     sent += 1
-                    print(
-                        'Timed out after ' + str(options.timeout) + ' seconds'
-                    )
+                    print(f"Timed out after {args.timeout} seconds")
                 else:
                     sent += 1
                     print(ex)
             # End the loop if needed
-            if not options.t:
-                if sent == options.count:
+            if not args.t:
+                if sent == args.count:
                     break
             # Sleep between the requests
             time.sleep(1)
-    # Catch the keyboard interrupt to end the loop
+    # Catch keyboard interrupt to end the loop
     except KeyboardInterrupt:
-        print('\nAborted.')
+        print("\nAborted.")
 
     # Early exit without sending packets
     if sent == 0:
@@ -155,18 +176,17 @@ def cli():
         sys.exit(1)
 
     # Print the summary
-    print('\nStatistics:')
-    print('-' * 26)
-    print('\nHost: %s\n' % host)
-    print(
-        "Sent: %d packets\nReceived: %d packets\n"
-        "Lost: %d packets (%.2f%%)\n"
-        % (sent, rcvd, sent - rcvd, float(sent - rcvd) / sent * 100)
-    )
-    print('Min time: %.2f ms\nMax time: %.2f ms\nAverage time: %.2f ms\n'
-          % (min_time, max_time, total_time / rcvd))
+    print("\nStatistics:")
+    print("-" * 26)
+    print(f"\nHost: {args.host}\n")
+    print(f"Sent: {sent} packets")
+    print(f"Received: {rcvd} packets")
+    print(f"Lost: {sent - rcvd} packets ({float(sent - rcvd) / sent * 100:.2f})%\n")
+    print(f"Min time: {min_time:.2f} ms")
+    print(f"Max time: {max_time:.2f} ms")
+    print(f"Average time: {total_time / rcvd:.2f} ms\n")
 
 
 # Run main function if invoked from shell
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()
