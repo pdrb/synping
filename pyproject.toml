@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "synping"
+version = "1.0"
+authors = [
+  { name="Pedro Gonring", email="pedro@bigode.net" },
+]
+description = "Ping hosts using tcp syn packets"
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = ["ping", "tcp", "synping"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+synping = "synping.synping:cli"
+
+[project.urls]
+Homepage = "https://github.com/pdrb/synping"
