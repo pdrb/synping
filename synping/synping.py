@@ -1,16 +1,27 @@
 #!/usr/bin/env python3
 
-# synping 1.0
-# author: Pedro Buteri Gonring
+# author: Pedro Gonring
 # email: pedro@bigode.net
-# date: 20240929
+# date: 20241001
 
 import argparse
 import socket
 import sys
 import time
+from dataclasses import dataclass
 
-_version = "1.0"
+__version__ = "1.1"
+
+
+@dataclass
+class Statistics:
+    """Class for keeping track of ping statistics."""
+
+    rcvd: int = 0
+    sent: int = 0
+    min_time: float = 0
+    max_time: float = 0
+    total_time: float = 0
 
 
 def parse_args() -> argparse.Namespace:
@@ -59,7 +70,7 @@ def parse_args() -> argparse.Namespace:
         "-v",
         "--version",
         action="version",
-        version=_version,
+        version=__version__,
     )
 
     # Print help if no argument is given
@@ -111,80 +122,97 @@ def ping(host: str, port: int, timeout: float) -> float:
     return (end_time - init_time) * 1000
 
 
-def cli():
-    """Main CLI."""
-    args = parse_args()
+def run_ping_loop(statistics: Statistics, args: argparse.Namespace, remote_ip: str) -> None:
+    """Run ping loop."""
+    while True:
+        try:
+            ping_time = ping(remote_ip, args.port, args.timeout)
+            statistics.sent += 1
+            statistics.rcvd += 1
+            # Initialize min and max time
+            if statistics.rcvd == 1:
+                statistics.min_time = ping_time
+                statistics.max_time = ping_time
+            # Update min and max if needed
+            if ping_time < statistics.min_time:
+                statistics.min_time = ping_time
+            if ping_time > statistics.max_time:
+                statistics.max_time = ping_time
+            # Update the total time for calculating avg later
+            statistics.total_time += ping_time
+            print(f"Reply from {remote_ip}:{args.port} time={ping_time:.2f} ms")
+        except Exception as ex:
+            if "timed out" in str(ex):
+                statistics.sent += 1
+                print(f"Timed out after {args.timeout} seconds")
+            else:
+                statistics.sent += 1
+                print(ex)
+        # End the loop if needed
+        if not args.t:
+            if statistics.sent == args.count:
+                break
+        # Sleep between the requests
+        time.sleep(1)
 
-    # Variables
-    rcvd = 0
-    sent = 0
-    total_time = 0
 
-    # Get the host IP
-    remote_ip = get_ip(args.host)
-
-    # Print appropriate beginning message
+def print_beginning_message(args: argparse.Namespace) -> None:
+    """Print appropriate beginning message."""
     if not args.t:
         print(f"\nPinging {args.host} {args.count} times on port {args.port}:\n")
     else:
         print(f"\nPinging {args.host} on port {args.port}:\n")
 
-    # Begin the pinging
-    try:
-        while True:
-            try:
-                ping_time = ping(remote_ip, args.port, args.timeout)
-                sent += 1
-                rcvd += 1
-                # Initialize min and max time
-                if rcvd == 1:
-                    min_time = ping_time
-                    max_time = ping_time
-                # Update min and max if needed
-                if ping_time < min_time:
-                    min_time = ping_time
-                if ping_time > max_time:
-                    max_time = ping_time
-                # Update the total time for calculating avg later
-                total_time += ping_time
-                print(f"Reply from {remote_ip}:{args.port} time={ping_time:.2f} ms")
-            except Exception as ex:
-                if "timed out" in str(ex):
-                    sent += 1
-                    print(f"Timed out after {args.timeout} seconds")
-                else:
-                    sent += 1
-                    print(ex)
-            # End the loop if needed
-            if not args.t:
-                if sent == args.count:
-                    break
-            # Sleep between the requests
-            time.sleep(1)
-    # Catch keyboard interrupt to end the loop
-    except KeyboardInterrupt:
-        print("\nAborted.")
 
+def print_information(statistics: Statistics, args: argparse.Namespace) -> None:
+    """Print ping information."""
     # Early exit without sending packets
-    if sent == 0:
+    if statistics.sent == 0:
         sys.exit(1)
 
     # If no packets received print appropriate message and end the program
-    if rcvd == 0:
+    if statistics.rcvd == 0:
         print("\nDidn't receive any packets...")
         print("Host is probably DOWN or firewalled. Sorry :'(\n")
         sys.exit(1)
 
-    # Print the summary
+    # Finally
     print("\nStatistics:")
     print("-" * 26)
     print(f"\nHost: {args.host}\n")
-    print(f"Sent: {sent} packets")
-    print(f"Received: {rcvd} packets")
-    print(f"Lost: {sent - rcvd} packets ({float(sent - rcvd) / sent * 100:.2f})%\n")
-    print(f"Min time: {min_time:.2f} ms")
-    print(f"Max time: {max_time:.2f} ms")
-    print(f"Average time: {total_time / rcvd:.2f} ms\n")
+    print(f"Sent: {statistics.sent} packets")
+    print(f"Received: {statistics.rcvd} packets")
+    print(
+        f"Lost: {statistics.sent - statistics.rcvd} packets "
+        f"({float(statistics.sent - statistics.rcvd) / statistics.sent * 100:.2f})%\n"
+    )
+    print(f"Min time: {statistics.min_time:.2f} ms")
+    print(f"Max time: {statistics.max_time:.2f} ms")
+    print(f"Average time: {statistics.total_time / statistics.rcvd:.2f} ms\n")
+
+
+def cli():
+    """Main CLI."""
+    args = parse_args()
+
+    # Store ping information
+    statistics = Statistics()
+
+    # Get the host IP
+    remote_ip = get_ip(args.host)
+
+    # Print appropriate beginning message
+    print_beginning_message(args)
+
+    # Begin the pinging
+    try:
+        run_ping_loop(statistics, args, remote_ip)
+    # Catch keyboard interrupt to end the loop
+    except KeyboardInterrupt:
+        print("\nAborted.")
+
+    # Print information
+    print_information(statistics, args)
 
 
 # Run main function if invoked from shell
