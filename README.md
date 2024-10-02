@@ -1,7 +1,6 @@
 # synping
 
 [![CI](https://github.com/pdrb/synping/actions/workflows/ci.yml/badge.svg)](https://github.com/pdrb/synping/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/pypi/pyversions/synping.svg)](https://pypi.python.org/pypi/synping)
 [![Version](https://img.shields.io/pypi/v/synping.svg)](https://pypi.python.org/pypi/synping)
 [![Downloads](https://static.pepy.tech/badge/synping)](https://pepy.tech/project/synping)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -39,7 +38,7 @@ Average time: 128.85 ms
 
 ## Notes
 
-* Works on Python 3.6+, for older Python (2.6, 2.7, 3.4...) use synping 0.9
+* Works on Python 3.7+, for older Python (2.7, 3.4...) use synping 0.9
 * Uses only standard library for maximum compatibility
 
 ## Install
