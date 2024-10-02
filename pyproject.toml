@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "synping"
-version = "1.0"
+dynamic = ["version"]
 authors = [
   { name="Pedro Gonring", email="pedro@bigode.net" },
 ]
@@ -24,3 +24,6 @@ synping = "synping.synping:cli"
 
 [project.urls]
 Homepage = "https://github.com/pdrb/synping"
+
+[tool.hatch.version]
+path = "synping/synping.py"
